@@ -3,10 +3,12 @@ from typing import List
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException
+from sqlmodel import select
 
+from db import SessionDep, create_all_tables
 from models import Transaction, Invoice, CustomerCreate, Customer
 
-app = FastAPI()
+app = FastAPI(lifespan=create_all_tables)
 
 
 @app.get("/")
@@ -56,20 +58,17 @@ async def get_hour(frt: str, iso_code: str):
     }
 
 
-db_simulator: list[Customer] = []
-
-
 @app.get("/customers", response_model=List[Customer])
-async def list_customers():
-    return db_simulator
+async def list_customers(session: SessionDep):
+    return session.exec(select(Customer)).all()
 
 
 @app.post("/customers", response_model=Customer)
-async def create_customer(customer_data: CustomerCreate):
+async def create_customer(customer_data: CustomerCreate, session: SessionDep):
     customer = Customer.model_validate(customer_data.model_dump())
-    # Asumeindo que se hace en la db
-    db_simulator.append(customer)
-    customer.id = len(db_simulator)
+    session.add(customer)
+    session.commit()
+    session.refresh(customer)
     return customer
 
 

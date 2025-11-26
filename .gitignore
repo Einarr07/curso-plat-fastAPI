@@ -43,7 +43,6 @@ coverage.xml
 
 # --- Config / secretos ---
 .env
-.env.*
 *.env
 *.ini.local
 *.yaml.local
