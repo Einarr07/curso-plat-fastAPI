@@ -1,4 +1,3 @@
-from db import engine
 from pydantic import BaseModel, EmailStr, field_validator, ValidationError
 from sqlmodel import Session, select
 
