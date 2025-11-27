@@ -1,14 +1,16 @@
 from fastapi import FastAPI
 
-from app.db import create_all_tables
-from app.routers import customers, transaction, time
+from app.db import init_db
+from app.routers import customers, transaction, invoice, time
 
 app = FastAPI(
-    lifespan=create_all_tables,
+    lifespan=init_db(),
     responses={404: {"description": "Not found"}},
 )
 
 # Routes
 app.include_router(customers.router, prefix="/api")
 app.include_router(transaction.router, prefix="/api")
+
+app.include_router(invoice.router, prefix="/api")
 app.include_router(time.router, prefix="/api")

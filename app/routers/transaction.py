@@ -2,39 +2,55 @@ from fastapi import HTTPException, status, APIRouter
 from sqlmodel import select
 
 from app.db import SessionDep
+from app.models.customers import Customer
 from app.models.transaction import Transaction
 from app.schemas.transaction import TransactionRead, TransactionUpdate, TransactionCreate
 
 router = APIRouter(
-    prefix="/transaction",
-    tags=["transaction"],
+    prefix="/transactions",
+    tags=["transactions"],
     responses={404: {"description": "Not found"}},
 )
 
 
-@router.get("/", response_model=list[TransactionRead], status_code=status.HTTP_200_OK)
+@router.get("/", response_model=list[TransactionRead])
 async def list_transaction(session: SessionDep):
     return session.exec(select(Transaction)).all()
 
 
-@router.get("/{transaction_id}", response_model=TransactionRead, status_code=status.HTTP_200_OK)
+@router.get("/{transaction_id}", response_model=TransactionRead)
 async def get_transaction(transaction_id: int, session: SessionDep):
     transaction_db = session.get(Transaction, transaction_id)
     if not transaction_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction no encontrada")
     return transaction_db
 
 
 @router.post("/", response_model=TransactionRead, status_code=status.HTTP_201_CREATED)
 async def create_transaction(transaction_data: TransactionCreate, session: SessionDep):
-    transaction = Transaction.model_validate((transaction_data.model_dump()))
-    session.add(transaction)
-    session.commit()
-    session.refresh(transaction)
-    return transaction
+    transaction_dict = transaction_data.model_dump()
+
+    customer = session.get(Customer, transaction_dict.get("customer_id"))
+    if not customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer no encontrado")
+
+    transaction_db = Transaction(**transaction_dict)
+
+    try:
+        session.add(transaction_db)
+        session.commit()
+        session.refresh(transaction_db)
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear transaction\n{e}",
+        )
+
+    return transaction_db
 
 
-@router.put("/{transaction_id}", response_model=TransactionRead, status_code=status.HTTP_200_OK)
+@router.put("/{transaction_id}", response_model=TransactionRead)
 async def update_transaction(
         transaction_id: int,
         transaction_data: TransactionUpdate,
@@ -42,13 +58,23 @@ async def update_transaction(
 ):
     transaction_db = session.get(Transaction, transaction_id)
     if not transaction_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction no encontrada")
 
-    transaction_data.amount = transaction_data.amount
-    transaction_db.description = transaction_data.description
+    update_data = transaction_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(transaction_db, field, value)
 
-    session.commit()
-    session.refresh(transaction_db)
+    try:
+        session.add(transaction_db)
+        session.commit()
+        session.refresh(transaction_db)
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar transaction {transaction_id}\n{e}",
+        )
+
     return transaction_db
 
 
@@ -56,7 +82,14 @@ async def update_transaction(
 async def delete_transaction(transaction_id: int, session: SessionDep):
     transaction_db = session.get(Transaction, transaction_id)
     if not transaction_db:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction no encontrada")
 
-    session.delete(transaction_db)
-    session.commit()
+    try:
+        session.delete(transaction_db)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al eliminar transaction {transaction_id}\n{e}",
+        )

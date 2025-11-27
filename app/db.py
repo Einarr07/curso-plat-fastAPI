@@ -2,7 +2,7 @@ import os
 from typing import Annotated
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import Depends
 from sqlmodel import create_engine, Session, SQLModel
 
 load_dotenv()
@@ -20,9 +20,12 @@ postgresql_url = (
 engine = create_engine(postgresql_url, echo=True)
 
 
-def create_all_tables(app: FastAPI):
+def init_db():
+    from app.models import customers  # noqa: F401
+    from app.models import transaction  # noqa: F401
+    from app.models import invoice  # noqa: F401
+
     SQLModel.metadata.create_all(engine)
-    yield
 
 
 def get_session():

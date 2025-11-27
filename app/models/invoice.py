@@ -8,8 +8,9 @@ if TYPE_CHECKING:
 
 
 class Invoice(SQLModel, table=True):
+    __tablename__ = "invoices"
     id: Optional[int] = Field(default=None, primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
+    customer_id: int = Field(foreign_key="customers.id")
     total: int = 0
 
     customer: 'Customer' = Relationship(back_populates="invoices")
