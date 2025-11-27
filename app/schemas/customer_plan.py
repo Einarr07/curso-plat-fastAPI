@@ -1,9 +1,12 @@
 from pydantic import BaseModel
 
+from app.models.customer_plan import StatusEnum
+
 
 class CustomerPlanBase(BaseModel):
     plan_id: int
     customer_id: int
+    status: StatusEnum
 
 
 class CustomerPlanCreate(CustomerPlanBase):

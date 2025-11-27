@@ -14,7 +14,7 @@ router = APIRouter(
 
 @router.get("/", response_model=list[PlanRead], status_code=status.HTTP_200_OK)
 async def list_plan(session: SessionDep):
-    return session.exec(select(Plan)).all
+    return session.exec(select(Plan)).all()
 
 
 @router.post("/", response_model=PlanRead, status_code=status.HTTP_201_CREATED)
