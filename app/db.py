@@ -21,10 +21,13 @@ engine = create_engine(postgresql_url, echo=True)
 
 
 def init_db():
-    from app.models import customers  # noqa: F401
-    from app.models import transaction  # noqa: F401
-    from app.models import invoice  # noqa: F401
+    from app.models.customers import Customer
+    from app.models.plan import Plan
+    from app.models.customer_plan import CustomerPlan
+    from app.models.transaction import Transaction
+    from app.models.invoice import Invoice
 
+    _ = (Customer, Plan, CustomerPlan, Transaction, Invoice)
     SQLModel.metadata.create_all(engine)
 
 
